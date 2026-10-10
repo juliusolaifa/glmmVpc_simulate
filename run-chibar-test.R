@@ -2,14 +2,15 @@ run_chibar_test <- function(
     fit,
     X,
     Z,
-    family
+    weights_fun,
+    family = "nbinom"
 ) {
-    if (!fit$alternative$converged ||
-        !fit$null$converged) {
+    if (!isTRUE(fit$alternative$converged) ||
+        !isTRUE(fit$null$converged)) {
         stop("Both models must converge.")
     }
 
-    # Fisher information under H0: Gamma = 0
+    # Boundary Fisher information at null estimates
     fim <- glmm_fim_theoretical(
         X = X,
         Z = Z,
@@ -18,20 +19,20 @@ run_chibar_test <- function(
         dispersion = fit$null$theta
     )
 
-    # Nuisance-adjusted information metric
-    I_metric <- fim$I_metric
+    # Exact weights from nuisance-adjusted information
+    weights <- weights_fun(fim$I_metric)
 
-    # Exact chi-bar-square weights
-    weights <- chibar_weights_theoretical(
-        information = I_metric
-    )
-
-    # LRT and p-value
-    lrt <- glmm_chibar_lrt(
+    # LRT statistic and p-value
+    test <- glmm_chibar_lrt(
         logLik_null = fit$null$logLik,
         logLik_alt = fit$alternative$logLik,
         weights = weights
     )
 
-    lrt
+    list(
+        statistic = test$statistic,
+        p_value = test$p_value,
+        weights = weights,
+        I_metric = fim$I_metric
+    )
 }
