@@ -10,7 +10,8 @@ run_lrt_simulation <- function(
     lrt_tol = 1e-6,
     rel.tol = 1e-7,
     subdivisions = 200L,
-    progress = TRUE
+    progress = TRUE,
+    debug_replicate = NULL
 ) {
 
     # --------------------------------------------------
@@ -51,6 +52,17 @@ run_lrt_simulation <- function(
     }
 
     R <- as.integer(R)
+
+    if (!is.null(debug_replicate)) {
+        if (!is.numeric(debug_replicate) ||
+            length(debug_replicate) != 1L ||
+            !is.finite(debug_replicate) ||
+            debug_replicate != floor(debug_replicate) ||
+            debug_replicate < 1 ||
+            debug_replicate > R) {
+            stop("debug_replicate must be an integer between 1 and R.")
+        }
+    }
 
     if (length(alpha) != 1L ||
         !is.finite(alpha) ||
@@ -346,7 +358,7 @@ run_lrt_simulation <- function(
                 singular_tol = singular_tol
             )
 
-            if (r == bad[1]) {
+            if (!is.null(debug_replicate) && r == debug_replicate) {
 
                 alt <- fit$alternative$fit
                 null <- fit$null$fit
@@ -468,7 +480,6 @@ run_lrt_simulation <- function(
             if (!is.finite(ll_alt) ||
                 !is.finite(ll_null)) {
                 rec$failure_reason <- "nonfinite_likelihood"
-                return_value <- NULL
             } else {
 
                 T_raw <- 2 * (ll_alt - ll_null)
