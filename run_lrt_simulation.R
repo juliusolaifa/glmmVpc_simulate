@@ -346,6 +346,32 @@ run_lrt_simulation <- function(
                 singular_tol = singular_tol
             )
 
+            if (r == bad[1]) {
+
+                alt <- fit$alternative$fit
+                null <- fit$null$fit
+            
+                print(data.frame(
+                    model = c("alternative", "null"),
+                    reported_logLik = c(
+                        as.numeric(logLik(alt)),
+                        as.numeric(logLik(null))
+                    ),
+                    optimizer_objective = c(
+                        alt$fit$objective,
+                        null$fit$objective
+                    ),
+                    hessian_ok = c(
+                        alt$sdr$pdHess,
+                        null$sdr$pdHess
+                    ),
+                    convergence_code = c(
+                        alt$fit$convergence,
+                        null$fit$convergence
+                    )
+                ))
+            }
+
             alt <- fit$alternative
             null <- fit$null
 
