@@ -1,6 +1,5 @@
-set.seed(123)
-
-dat <- simulate_nbinom_glmm(
+% Type I
+scenario_null <- list(
     n_clusters = 100,
     cluster_size = 5,
     beta = c(0.5, 0.2),
@@ -8,28 +7,37 @@ dat <- simulate_nbinom_glmm(
     theta = 2
 )
 
-fit <- fit_nbinom_glmm(dat)
-
-# Construct cluster-specific matrices
-X_all <- model.matrix(~ x, data = dat)
-
-idx <- split(seq_len(nrow(dat)), dat$id)
-
-X <- lapply(
-    idx,
-    function(i) X_all[i, , drop = FALSE]
+sim_null <- run_lrt_simulation(
+    scenario = scenario_null,
+    R = 100,
+    alpha = 0.05,
+    weights = c("oracle", "plugin"),
+    seed = 123
 )
 
-Z <- X
+sim_null$summary
+sim_null$diagnostics
 
-# Run chi-bar-square LRT
-test <- run_chibar_test(
-    fit = fit,
-    X = X,
-    Z = Z
+
+% Power
+scenario_alt <- list(
+    n_clusters = 100,
+    cluster_size = 5,
+    beta = c(0.5, 0.2),
+    Gamma = matrix(
+        c(0.5, 0.1,
+          0.1, 0.3),
+        nrow = 2
+    ),
+    theta = 2
 )
 
-test$statistic
-test$p_value
-test$weights
-test$integration_error
+sim_alt <- run_lrt_simulation(
+    scenario = scenario_alt,
+    R = 100,
+    alpha = 0.05,
+    weights = c("oracle", "plugin"),
+    seed = 456
+)
+
+sim_alt$summary
