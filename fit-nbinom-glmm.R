@@ -18,34 +18,56 @@ fit_nbinom_glmm <- function(
     # Helper: extract fitting diagnostics
     # --------------------------------------------------
 
-    fit_diagnostics <- function(fit) {
+    fit_diagnostics <- function(fit, grad_tol = 1e-4) {
 
         ll <- as.numeric(stats::logLik(fit))
-
+    
         convergence_code <- fit$fit$convergence
-
-        optimizer_ok <- isTRUE(
-            convergence_code == 0L
-        )
-
-        hessian_ok <- isTRUE(
-            fit$sdr$pdHess
-        )
-
+    
+        optimizer_ok <- isTRUE(convergence_code == 0L)
+    
+        hessian_ok <- isTRUE(fit$sdr$pdHess)
+    
         likelihood_ok <- (
             length(ll) == 1L &&
             is.finite(ll)
         )
-
+    
+        gradient <- tryCatch(
+            fit$obj$gr(fit$fit$par),
+            error = function(e) NA_real_
+        )
+    
+        gradient_ok <- (
+            length(gradient) > 0L &&
+            all(is.finite(gradient))
+        )
+    
+        max_abs_gradient <- if (gradient_ok) {
+            max(abs(gradient))
+        } else {
+            NA_real_
+        }
+    
+        stationary <- isTRUE(
+            gradient_ok &&
+            max_abs_gradient <= grad_tol
+        )
+    
         list(
             convergence_code = convergence_code,
+            optimizer_message = fit$fit$message,
             optimizer_ok = optimizer_ok,
             hessian_ok = hessian_ok,
             likelihood_ok = likelihood_ok,
-            converged = optimizer_ok && likelihood_ok
+            max_abs_gradient = max_abs_gradient,
+            stationary = stationary,
+            converged = optimizer_ok && likelihood_ok,
+            numerically_acceptable = likelihood_ok &&
+                hessian_ok &&
+                stationary
         )
     }
-
     # --------------------------------------------------
     # 1. Alternative model
     # --------------------------------------------------
