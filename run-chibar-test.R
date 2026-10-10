@@ -2,15 +2,17 @@ run_chibar_test <- function(
     fit,
     X,
     Z,
-    weights_fun,
-    family = "nbinom"
+    family = "nbinom",
+    rel.tol = 1e-7,
+    subdivisions = 200L
 ) {
+    # Check convergence
     if (!isTRUE(fit$alternative$converged) ||
         !isTRUE(fit$null$converged)) {
         stop("Both models must converge.")
     }
 
-    # Boundary Fisher information at null estimates
+    # 1. Theoretical Fisher information under H0
     fim <- glmm_fim_theoretical(
         X = X,
         Z = Z,
@@ -19,20 +21,25 @@ run_chibar_test <- function(
         dispersion = fit$null$theta
     )
 
-    # Exact weights from nuisance-adjusted information
-    weights <- weights_fun(fim$I_metric)
+    # 2. Exact chi-bar-square weights
+    weights_result <- chibar_weights_theoretical(
+        information = fim$I_metric,
+        rel.tol = rel.tol,
+        subdivisions = subdivisions
+    )
 
-    # LRT statistic and p-value
-    test <- glmm_chibar_lrt(
+    # 3. Likelihood ratio test
+    lrt <- glmm_chibar_lrt(
         logLik_null = fit$null$logLik,
         logLik_alt = fit$alternative$logLik,
-        weights = weights
+        weights = weights_result$w
     )
 
     list(
-        statistic = test$statistic,
-        p_value = test$p_value,
-        weights = weights,
+        statistic = lrt$statistic,
+        p_value = lrt$p_value,
+        weights = weights_result$w,
+        integration_error = weights_result$abs.error,
         I_metric = fim$I_metric
     )
 }
